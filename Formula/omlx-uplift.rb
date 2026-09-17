@@ -44,12 +44,13 @@ class OmlxUplift < Formula
 
     File.write("/tmp/uplift-postinstall-debug", "post_install entered\n")
     begin
+      require "fileutils"
       src = purelib(libexec/"bin/python")
       dst = purelib(omlx_python)
       File.write("/tmp/uplift-postinstall-debug", "purelibs resolved: #{src} -> #{dst}\n", mode: "a")
-      rm_r_f Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
-      cp_r "#{src}/omlx_uplift", "#{dst}/omlx_uplift"
-      Dir["#{src}/omlx_uplift-*.dist-info"].each { |d| cp_r d, "#{dst}/#{File.basename(d)}" }
+      FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
+      FileUtils.cp_r "#{src}/omlx_uplift", "#{dst}/omlx_uplift"
+      Dir["#{src}/omlx_uplift-*.dist-info"].each { |d| FileUtils.cp_r d, "#{dst}/#{File.basename(d)}" }
       File.write "#{dst}/omlx_uplift.pth", "import omlx_uplift.autopatch\n"
       File.write("/tmp/uplift-postinstall-debug", "copy done\n", mode: "a")
     rescue => e
@@ -64,8 +65,9 @@ class OmlxUplift < Formula
   end
 
   def uninstall
+    require "fileutils"
     dst = purelib(omlx_python)
-    rm_r_f Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
+    FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
   end
 
   def caveats
