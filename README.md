@@ -36,7 +36,7 @@ launchd job both pick it up, no wrapper needed.
 | oMLX installed via | Get Uplift |
 | --- | --- |
 | Homebrew (`jundot/omlx`) | this tap, as above — full integration |
-| pip (`pip install omlx`) | `pip install omlx-uplift` from the `projects/omlx-uplift` directory of the [fork](https://github.com/zviratko/omlx/tree/feat/uplift-dashboard), then `omlx-uplift install` |
+| pip (`pip install omlx`) | `pip install --no-deps projects/omlx-uplift/` (from a clone of the fork) of the [fork](https://github.com/zviratko/omlx/tree/feat/uplift-dashboard), then `omlx-uplift install` |
 | DMG app bundle | run the standalone viewer anywhere Python works: `omlx-uplift view --api http://<host>:<port>` — same UI over plain HTTP (no live feed on vanilla upstream; persistent charts work when run on the same machine, reading `~/.omlx` directly) |
 
 Uninstall: `brew uninstall omlx-uplift` (removes the package and the .pth

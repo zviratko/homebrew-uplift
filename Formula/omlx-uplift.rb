@@ -24,15 +24,19 @@ class OmlxUplift < Formula
     #    view` for DMG installs, `install`/`uninstall` pth helpers).
     system "python3.11", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "fastapi", "uvicorn"
-    system libexec/"bin/pip", "install", "#{buildpath}/projects/omlx-uplift"
+    # --no-deps: the package declares `omlx` (not on PyPI); this venv is
+    # the HTTP viewer and does not import omlx at all.
+    system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}/projects/omlx-uplift"
     # pip's console-script shim, renamed into place for a predictable bin.
     bin.install libexec/"bin/omlx-uplift"
 
     # 2) Inject into the oMLX keg's python: bare `omlx serve` (and its
     #    launchd service) then mounts /uplift without any wrapper or file
     #    edits inside the keg. This writes into Cellar/omlx/*/libexec —
-    #    the ONLY divergence point, removed by uninstall.
-    system omlx_python, "-m", "pip", "install", "#{buildpath}/projects/omlx-uplift"
+    #    the ONLY divergence point, removed by uninstall. omlx itself is
+    #    already in that venv (--no-deps: it has no PyPI distribution).
+    system omlx_python, "-m", "pip", "install", "--no-deps",
+           "#{buildpath}/projects/omlx-uplift"
     system omlx_python, "-m", "omlx_uplift.cli", "install",
            "--python", omlx_python.to_s
   end
