@@ -6,14 +6,15 @@ class OmlxUplift < Formula
   head "https://github.com/zviratko/omlx.git", branch: "feat/uplift-dashboard", using: :git
 
   # Depends on the omlx formula from the upstream tap; that tap must be
-  # added first (caveats say so). We do NOT patch omlx's keg files — the
-  # package mounts itself at python level; a vanilla `brew upgrade omlx`
-  # stays byte-identical (re-run `brew reinstall omlx-uplift` afterwards
-  # to re-inject into the fresh keg).
+  # added first (brew resolves cross-tap deps by full name). We do NOT
+  # patch omlx's keg files — the package mounts itself at python level; a
+  # vanilla `brew upgrade omlx` stays byte-identical (re-run
+  # `brew reinstall omlx-uplift` afterwards to re-inject into the fresh keg).
+  depends_on "jundot/omlx/omlx"
   depends_on "python@3.11"
 
   def omlx_python
-    (Formula["omlx"].opt_prefix/"libexec/bin/python")
+    (formula_opt_prefix("omlx")/"libexec/bin/python")
   end
 
   def install
