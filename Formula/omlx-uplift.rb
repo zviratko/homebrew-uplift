@@ -27,11 +27,11 @@ class OmlxUplift < Formula
     system libexec/"bin/pip", "install", "fastapi", "uvicorn"
     # --no-deps: the package declares `omlx` (no PyPI distribution); this
     # venv is the HTTP viewer and does not import omlx at all.
-    system libexec/"bin/pip", "install", "--no-deps", "#{staged_path}/projects/omlx-uplift"
-    # Keep a copy for post_install's keg injection (staged_path is cleaned
+    system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}/projects/omlx-uplift"
+    # Keep a copy for post_install's keg injection (buildpath is cleaned
     # after install; libexec persists in the Cellar).
     libexec.mkpath
-    cp_r "#{staged_path}/projects/omlx-uplift", libexec/"src"
+    cp_r "#{buildpath}/projects/omlx-uplift", libexec/"src"
     # pip's console-script shim, into a predictable bin.
     bin.install libexec/"bin/omlx-uplift"
   end
