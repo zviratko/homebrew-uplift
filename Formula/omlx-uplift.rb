@@ -30,33 +30,23 @@ class OmlxUplift < Formula
     system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}/projects/omlx-uplift"
     # pip's console-script shim, into a predictable bin.
     bin.install libexec/"bin/omlx-uplift"
-  end
 
-  def post_install
     # Mount into the oMLX keg's python: bare `omlx serve` (and its
-    # launchd service) then serves /uplift without any wrapper or file
-    # edits inside the keg. No pip here: brew's sandbox allows writing
-    # site-packages of other formulae but denies their bin/ (pip insists
-    # on writing a console-script shim we never use — the keg always
-    # invokes `-m omlx_uplift.cli`). Copying the installed files, incl.
-    # dist-info so importlib.metadata/version keep working.
+    # launchd service) then serves /uplift with zero wrapper and zero
+    # file edits inside the keg. Done here rather than post_install:
+    # brew's *post-install* sandbox denies writes into other kegs, while
+    # the install-phase sandbox permits site-packages (bins stay denied,
+    # hence file copy instead of pip — the keg invokes the CLI as
+    # `-m omlx_uplift.cli` and never needs a console-script shim).
     return odie("omlx not installed (brew install jundot/omlx/omlx)") unless omlx_python.exist?
 
-    File.write("/tmp/uplift-postinstall-debug", "post_install entered\n")
-    begin
-      require "fileutils"
-      src = purelib(libexec/"bin/python")
-      dst = purelib(omlx_python)
-      File.write("/tmp/uplift-postinstall-debug", "purelibs resolved: #{src} -> #{dst}\n", mode: "a")
-      FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
-      FileUtils.cp_r "#{src}/omlx_uplift", "#{dst}/omlx_uplift"
-      Dir["#{src}/omlx_uplift-*.dist-info"].each { |d| FileUtils.cp_r d, "#{dst}/#{File.basename(d)}" }
-      File.write "#{dst}/omlx_uplift.pth", "import omlx_uplift.autopatch\n"
-      File.write("/tmp/uplift-postinstall-debug", "copy done\n", mode: "a")
-    rescue => e
-      File.write("/tmp/uplift-postinstall-debug", "EXC #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}\n", mode: "a")
-      raise
-    end
+    require "fileutils"
+    src = purelib(libexec/"bin/python")
+    dst = purelib(omlx_python)
+    FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
+    FileUtils.cp_r "#{src}/omlx_uplift", "#{dst}/omlx_uplift"
+    Dir["#{src}/omlx_uplift-*.dist-info"].each { |d| FileUtils.cp_r d, "#{dst}/#{File.basename(d)}" }
+    File.write "#{dst}/omlx_uplift.pth", "import omlx_uplift.autopatch\n"
   end
 
   def purelib(python)
@@ -65,9 +55,16 @@ class OmlxUplift < Formula
   end
 
   def uninstall
+    # Runs before our own keg is removed (unsandboxed). If omlx was
+    # already removed there is nothing to clean; never fail the uninstall
+    # over it.
     require "fileutils"
+    return unless omlx_python.exist?
+
     dst = purelib(omlx_python)
     FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
+  rescue StandardError => e
+    opoo "could not clean uplift mount from omlx python: #{e.message}"
   end
 
   def caveats
