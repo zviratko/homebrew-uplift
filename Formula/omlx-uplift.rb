@@ -28,10 +28,6 @@ class OmlxUplift < Formula
     # --no-deps: the package declares `omlx` (no PyPI distribution); this
     # venv is the HTTP viewer and does not import omlx at all.
     system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}/projects/omlx-uplift"
-    # Keep a copy for post_install's keg injection (buildpath is cleaned
-    # after install; libexec persists in the Cellar).
-    libexec.mkpath
-    cp_r "#{buildpath}/projects/omlx-uplift", libexec/"src"
     # pip's console-script shim, into a predictable bin.
     bin.install libexec/"bin/omlx-uplift"
   end
@@ -39,13 +35,29 @@ class OmlxUplift < Formula
   def post_install
     # Mount into the oMLX keg's python: bare `omlx serve` (and its
     # launchd service) then serves /uplift without any wrapper or file
-    # edits inside the keg. `requirement`-style guard keeps --HEAD
-    # rebuilds from hard-failing when omlx was removed in between.
+    # edits inside the keg. No pip here: brew's sandbox allows writing
+    # site-packages of other formulae but denies their bin/ (pip insists
+    # on writing a console-script shim we never use — the keg always
+    # invokes `-m omlx_uplift.cli`). Copying the installed files, incl.
+    # dist-info so importlib.metadata/version keep working.
     return odie("omlx not installed (brew install jundot/omlx/omlx)") unless omlx_python.exist?
 
-    system omlx_python, "-m", "pip", "install", "--no-deps", "#{libexec}/src"
-    system omlx_python, "-m", "omlx_uplift.cli", "install",
-           "--python", omlx_python.to_s
+    src = purelib(libexec/"bin/python")
+    dst = purelib(omlx_python)
+    rm_r_f Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
+    cp_r "#{src}/omlx_uplift", "#{dst}/omlx_uplift"
+    Dir["#{src}/omlx_uplift-*.dist-info"].each { |d| cp_r d, "#{dst}/#{File.basename(d)}" }
+    File.write "#{dst}/omlx_uplift.pth", "import omlx_uplift.autopatch\n"
+  end
+
+  def purelib(python)
+    Utils.safe_popen_read(python, "-c",
+      "import sysconfig; print(sysconfig.get_paths()['purelib'])").strip
+  end
+
+  def uninstall
+    dst = purelib(omlx_python)
+    rm_r_f Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
   end
 
   def caveats
@@ -55,8 +67,7 @@ class OmlxUplift < Formula
       After `brew upgrade omlx` re-run:
         brew reinstall omlx-uplift
       Remove with:
-        brew uninstall omlx-uplift
-        #{omlx_python} -m pip uninstall -y omlx-uplift   (if omlx is kept)
+        brew uninstall omlx-uplift   (also drops the mount from omlx's python)
     EOS
   end
 
