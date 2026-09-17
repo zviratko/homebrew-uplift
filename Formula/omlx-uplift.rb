@@ -19,63 +19,50 @@ class OmlxUplift < Formula
 
   def install
     # Own libexec venv: standalone viewer + CLI (`omlx-uplift view` for
-    # DMG installs; `install`/`uninstall` manage the .pth anywhere).
-    # Everything sandbox-writable stays here; the cross-keg injection
-    # runs in post_install (the install phase is sandboxed and denies
-    # writes into Cellar/omlx).
+    # DMG installs) + the mount manager. brew's sandbox denies ALL writes
+    # into other kegs in every phase (install, post_install, test), so
+    # the formula itself cannot touch omlx's python. The user's one extra
+    # command, `omlx-uplift install`, runs unsandboxed and drops exactly
+    # ONE file — a .pth that bootstraps sys.path to this keg's venv and
+    # imports the autopatch. Nothing is copied into the omlx keg.
     system "python3.11", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "fastapi", "uvicorn"
-    # --no-deps: the package declares `omlx` (no PyPI distribution); this
-    # venv is the HTTP viewer and does not import omlx at all.
+    # --no-deps: the package declares `omlx` (no PyPI distribution).
     system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}/projects/omlx-uplift"
     # pip's console-script shim, into a predictable bin.
     bin.install libexec/"bin/omlx-uplift"
-
-    # Mount into the oMLX keg's python: bare `omlx serve` (and its
-    # launchd service) then serves /uplift with zero wrapper and zero
-    # file edits inside the keg. Done here rather than post_install:
-    # brew's *post-install* sandbox denies writes into other kegs, while
-    # the install-phase sandbox permits site-packages (bins stay denied,
-    # hence file copy instead of pip — the keg invokes the CLI as
-    # `-m omlx_uplift.cli` and never needs a console-script shim).
-    return odie("omlx not installed (brew install jundot/omlx/omlx)") unless omlx_python.exist?
-
-    require "fileutils"
-    src = purelib(libexec/"bin/python")
-    dst = purelib(omlx_python)
-    FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
-    FileUtils.cp_r "#{src}/omlx_uplift", "#{dst}/omlx_uplift"
-    Dir["#{src}/omlx_uplift-*.dist-info"].each { |d| FileUtils.cp_r d, "#{dst}/#{File.basename(d)}" }
-    File.write "#{dst}/omlx_uplift.pth", "import omlx_uplift.autopatch\n"
-  end
-
-  def purelib(python)
-    Utils.safe_popen_read(python, "-c",
-      "import sysconfig; print(sysconfig.get_paths()['purelib'])").strip
-  end
-
-  def uninstall
-    # Runs before our own keg is removed (unsandboxed). If omlx was
-    # already removed there is nothing to clean; never fail the uninstall
-    # over it.
-    require "fileutils"
-    return unless omlx_python.exist?
-
-    dst = purelib(omlx_python)
-    FileUtils.rm_rf Dir["#{dst}/omlx_uplift", "#{dst}/omlx_uplift-*.dist-info", "#{dst}/omlx_uplift.pth"]
-  rescue StandardError => e
-    opoo "could not clean uplift mount from omlx python: #{e.message}"
   end
 
   def caveats
-    <<~EOS
-      Uplift is mounted into omlx's python. Open:
-        http://127.0.0.1:<omlx-port>/uplift/
-      After `brew upgrade omlx` re-run:
-        brew reinstall omlx-uplift
-      Remove with:
-        brew uninstall omlx-uplift   (also drops the mount from omlx's python)
-    EOS
+    mounted = begin
+      if omlx_python.exist?
+        sp = Utils.safe_popen_read(omlx_python, "-c",
+          "import site; print(site.getsitepackages()[0])").strip
+        File.exist?("#{sp}/omlx_uplift.pth")
+      else
+        false
+      end
+    rescue StandardError
+      false
+    end
+
+    if mounted
+      <<~EOS
+        Uplift is mounted into omlx's python. Open:
+          http://127.0.0.1:<omlx-port>/uplift/
+        After `brew upgrade omlx` re-run:
+          omlx-uplift install
+          launchctl kickstart -k gui/$(id -u)/sh.brew.omlx
+      EOS
+    else
+      <<~EOS
+        Finish the mount (one command, writes one .pth into omlx's python):
+          omlx-uplift install
+        then restart omlx:
+          launchctl kickstart -k gui/$(id -u)/sh.brew.omlx
+        Open: http://127.0.0.1:<omlx-port>/uplift/
+      EOS
+    end
   end
 
   test do
