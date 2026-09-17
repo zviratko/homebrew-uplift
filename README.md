@@ -20,27 +20,31 @@ the same session works on `/admin` and `/uplift`.
 
 ## How it integrates
 
-`omlx_uplift` is a normal Python package installed into oMLX's own venv.
-An `omlx_uplift.pth` hook mounts the routes and starts the metrics collector
-when `omlx.server` is imported — bare `omlx serve` and the `brew services`
-launchd job both pick it up, no wrapper needed.
+`omlx-uplift` brews its own Python venv (CLI + standalone viewer). One
+command — `omlx-uplift install` — writes exactly **one file** into oMLX's
+python: an `omlx_uplift.pth` that adds the Uplift package to `sys.path`
+(via the stable `opt/` symlink) and mounts the routes plus the metrics
+collector when `omlx.server` is imported. Bare `omlx serve` and the
+`brew services` launchd job both pick it up, no wrapper, no copies.
 
 * oMLX keg **files are never edited** — `brew upgrade omlx` stays clean.
+* After `brew upgrade omlx` the new keg lacks the .pth: re-run
+  `omlx-uplift install` and restart omlx (the caveats print the exact
+  commands).
 * Metrics live in `~/.omlx/uplift/metrics.sqlite3` (owned by Uplift;
   vanilla's `~/.omlx/usage.sqlite3` is only ever read, read-only).
-* After `brew upgrade omlx` the new keg lacks the package: re-run
-  `brew reinstall omlx-uplift`.
 
 ## Install matrix
 
 | oMLX installed via | Get Uplift |
 | --- | --- |
 | Homebrew (`jundot/omlx`) | this tap, as above — full integration |
-| pip (`pip install omlx`) | `pip install --no-deps projects/omlx-uplift/` (from a clone of the fork) of the [fork](https://github.com/zviratko/omlx/tree/feat/uplift-dashboard), then `omlx-uplift install` |
+| pip (`pip install omlx`) | clone the [fork](https://github.com/zviratko/omlx/tree/feat/uplift-dashboard), `pip install --no-deps projects/omlx-uplift/`, then `omlx-uplift install` |
 | DMG app bundle | run the standalone viewer anywhere Python works: `omlx-uplift view --api http://<host>:<port>` — same UI over plain HTTP (no live feed on vanilla upstream; persistent charts work when run on the same machine, reading `~/.omlx` directly) |
 
-Uninstall: `brew uninstall omlx-uplift` (removes the package and the .pth
-from oMLX's venv).
+Uninstall: `omlx-uplift uninstall` (drops the .pth from oMLX's python),
+then `brew uninstall omlx-uplift`. Classic dashboard is untouched either
+way.
 
 ## Status
 

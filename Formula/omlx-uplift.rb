@@ -42,7 +42,7 @@ class OmlxUplift < Formula
       else
         false
       end
-    rescue StandardError
+    rescue
       false
     end
 
@@ -66,7 +66,9 @@ class OmlxUplift < Formula
   end
 
   test do
-    system omlx_python, "-c", "import omlx_uplift, omlx_uplift.router"
+    # Self-contained: our venv always contains the package; the keg copy
+    # only exists while mounted, so don't depend on mount state here.
+    system libexec/"bin/python", "-c", "import omlx_uplift, omlx_uplift.router, omlx_uplift.viewer"
     assert_match "Uplift", shell_output("#{bin}/omlx-uplift 2>&1", 1)
   end
 end
