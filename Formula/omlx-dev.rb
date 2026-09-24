@@ -7,7 +7,7 @@
 # its own cache clone and resets to origin/uplift-dev (verified in
 # download_strategy/git_download_strategy.rb). The ONLY rebuild path is:
 #
-#     omlx-uplift dev upgrade
+#     omlx-uplift dev install
 #
 # which re-materializes first, then `brew reinstall omlx-dev` (head-only
 # formula: HEAD is always the build target; this brew has no --HEAD flag
@@ -118,7 +118,7 @@ class OmlxDev < Omlx
 
   def install
     if Dir[buildpath/"omlx/*"].none?
-      odie "dev-src checkout missing at #{self.class.dev_src} — run: omlx-uplift dev install"
+      odie "dev-src checkout missing at #{self.class.dev_src} — run: omlx-uplift dev bootstrap"
     end
     super
     # The parent links bin/omlx; this keg must NOT, or linking both formulas
@@ -134,7 +134,10 @@ class OmlxDev < Omlx
     base = OmlxDevConstants.dev_config["base_path"] || "~/.omlx-dev"
     <<~EOS
       omlx-dev builds from #{self.class.dev_src} (branch #{self.class.dev_branch}).
-      Rebuild ONLY via:  omlx-uplift dev upgrade
+      Build/rebuild ONLY via:  omlx-uplift dev install
+      (first run needs `omlx-uplift dev bootstrap` — it clones dev-src and
+      creates the branch this formula builds; a missing-branch clone error
+      below means bootstrap was skipped).
       (it re-materializes the build patches, then reinstalls from the branch tip;
       plain `brew upgrade` no-ops on branch heads).
 
