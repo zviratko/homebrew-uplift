@@ -9,7 +9,9 @@
 #
 #     omlx-uplift dev upgrade
 #
-# which re-materializes first, then `brew reinstall --HEAD omlx-dev`.
+# which re-materializes first, then `brew reinstall omlx-dev` (head-only
+# formula: HEAD is always the build target; this brew has no --HEAD flag
+# on reinstall).
 #
 # WHY `class OmlxDev < Omlx` needs re-declarations: Homebrew resets the
 # stable/head SoftwareSpecs on subclassing (formula.rb `inherited`), so the
@@ -133,7 +135,7 @@ class OmlxDev < Omlx
     <<~EOS
       omlx-dev builds from #{self.class.dev_src} (branch #{self.class.dev_branch}).
       Rebuild ONLY via:  omlx-uplift dev upgrade
-      (it re-materializes the build patches, then `brew reinstall --HEAD omlx-dev`;
+      (it re-materializes the build patches, then reinstalls from the branch tip;
       plain `brew upgrade` no-ops on branch heads).
 
       Pin it so plain brew never rebuilds behind uplift's back:
