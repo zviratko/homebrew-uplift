@@ -30,7 +30,7 @@ module OmlxDevConstants
     path = File.expand_path("~/.omlx/uplift/dev.json")
     data = JSON.parse(File.read(path))
     data.is_a?(Hash) ? data : {}
-  rescue StandardError
+  rescue
     {}
   end
 
@@ -42,9 +42,10 @@ end
 # Load jundot's formula by PATH — plain `brew` may resolve formulas via the
 # API without ever loading the file, so the class may not be defined yet.
 unless defined?(Omlx)
-  odie "omlx-dev needs the jundot/omlx tap checked out at " \
-       "#{OmlxDevConstants::OMLX_FORMULA_PATH}; run: brew tap jundot/omlx" \
-    unless File.exist?(OmlxDevConstants::OMLX_FORMULA_PATH)
+  unless File.exist?(OmlxDevConstants::OMLX_FORMULA_PATH)
+    odie "omlx-dev needs the jundot/omlx tap checked out at " \
+         "#{OmlxDevConstants::OMLX_FORMULA_PATH}; run: brew tap jundot/omlx"
+  end
   require OmlxDevConstants::OMLX_FORMULA_PATH
 end
 
@@ -64,7 +65,7 @@ class OmlxDev < Omlx
 
   head "file://#{OmlxDevConstants.src_path(OmlxDevConstants.dev_config)}",
        branch: OmlxDevConstants.dev_config["formula_branch"] || "uplift-dev",
-       using: :git
+       using:  :git
 
   # Re-declared (see header): same flags as jundot/omlx so receipt-based
   # option reuse works the same way.
@@ -108,8 +109,8 @@ class OmlxDev < Omlx
     working_dir var
     log_path var/"log/omlx-dev.log"
     error_log_path var/"log/omlx-dev.log"
-    environment_variables PATH: std_service_path_env,
-                          OMLX_PORT: port.to_s,
+    environment_variables PATH:          std_service_path_env,
+                          OMLX_PORT:     port.to_s,
                           OMLX_BASE_PATH: File.expand_path(base)
   end
 
