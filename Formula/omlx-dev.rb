@@ -109,14 +109,15 @@ class OmlxDev < Omlx
     working_dir var
     log_path var/"log/omlx-dev.log"
     error_log_path var/"log/omlx-dev.log"
-    environment_variables PATH:          std_service_path_env,
-                          OMLX_PORT:     port.to_s,
+    environment_variables PATH:           std_service_path_env,
+                          OMLX_PORT:      port.to_s,
                           OMLX_BASE_PATH: File.expand_path(base)
   end
 
   def install
-    odie "dev-src checkout missing at #{self.class.dev_src} — run: omlx-uplift dev install" \
-      unless Dir[buildpath/"omlx/*"].any?
+    if Dir[buildpath/"omlx/*"].none?
+      odie "dev-src checkout missing at #{self.class.dev_src} — run: omlx-uplift dev install"
+    end
     super
     # The parent links bin/omlx; this keg must NOT, or linking both formulas
     # at once collides. Rename inside the keg (pre-link), leave the libexec
