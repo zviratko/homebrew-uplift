@@ -97,7 +97,7 @@ class OmlxDev < Omlx
   # data root diverted via env, and a log path that CANNOT collide — `var`
   # is the shared HOMEBREW_PREFIX/var, so omlx.log would clash.
   # Port/base_path come from dev.json (DEV-4); edits need
-# `brew services restart omlx-dev` — brew regenerates the launchd plist
+  # `brew services restart omlx-dev` — brew regenerates the launchd plist
   # from this block at start time.
   service do
     dev_cfg = OmlxDevConstants.dev_config
