@@ -1,9 +1,11 @@
 class OmlxUplift < Formula
   desc "Uplift dashboard: companion UI and metrics for oMLX"
-  homepage "https://github.com/zviratko/omlx"
-  # Development source: the projects/omlx-uplift package from the fork's
-  # feature branch. Tag-free for now (head-only tap formula).
-  head "https://github.com/zviratko/omlx.git", branch: "feat/uplift-dashboard", using: :git
+  homepage "https://github.com/zviratko/omlx-uplift"
+  # REPO-1: moved out of the omlx monorepo into its own repo (tag v0.1).
+  # Stable tag by default, `--HEAD` follows main (was: projects/omlx-uplift
+  # from zviratko/omlx feat/uplift-dashboard).
+  url "https://github.com/zviratko/omlx-uplift.git", tag: "v0.1"
+  head "https://github.com/zviratko/omlx-uplift.git", branch: "main", using: :git
 
   # Depends on the omlx formula from the upstream tap; brew resolves
   # cross-tap deps by full name. We do NOT patch omlx's keg files — the
@@ -28,7 +30,7 @@ class OmlxUplift < Formula
     system "python3.11", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "fastapi", "uvicorn"
     # --no-deps: the package declares `omlx` (no PyPI distribution).
-    system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}/projects/omlx-uplift"
+    system libexec/"bin/pip", "install", "--no-deps", "#{buildpath}"
     # pip's console-script shim, into a predictable bin.
     bin.install libexec/"bin/omlx-uplift"
   end
